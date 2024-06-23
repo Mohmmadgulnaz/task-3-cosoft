@@ -1,0 +1,242 @@
+ node js project
+mkdir project-management-tool
+cd project-management-tool
+mkdir backend
+cd backend
+npm init -y
+npm install express mongoose body-parser cors
+
+
+
+index.js
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(cors());
+app.use(bodyParser.json());
+
+mongoose.connect('your-mongodb-connection-string', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => console.log('MongoDB connected'))
+  .catch(err => console.log(err));
+
+// Project and Task routes
+const projects = require('./routes/projects');
+const tasks = require('./routes/tasks');
+app.use('/projects', projects);
+app.use('/tasks', tasks);
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
+
+
+project.js
+
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const ProjectSchema = new Schema({
+    name: { type: String, required: true },
+    description: String,
+    deadline: Date,
+});
+
+module.exports = mongoose.model('Project', ProjectSchema);
+
+
+task.js
+
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const TaskSchema = new Schema({
+    projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
+    name: { type: String, required: true },
+    status: { type: String, enum: ['Pending', 'In Progress', 'Completed'], default: 'Pending' },
+    deadline: Date,
+});
+
+module.exports = mongoose.model('Task', TaskSchema);
+
+
+
+project.js
+const express = require('express');
+const router = express.Router();
+const Project = require('../models/Project');
+
+// Get all projects
+router.get('/', async (req, res) => {
+    try {
+        const projects = await Project.find();
+        res.json(projects);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Create a new project
+router.post('/', async (req, res) => {
+    const project = new Project({
+        name: req.body.name,
+        description: req.body.description,
+        deadline: req.body.deadline,
+    });
+
+    try {
+        const newProject = await project.save();
+        res.status(201).json(newProject);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Get a project by ID
+router.get('/:id', async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id);
+        if (project == null) {
+            return res.status(404).json({ message: 'Cannot find project' });
+        }
+        res.json(project);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Update a project
+router.patch('/:id', async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id);
+        if (project == null) {
+            return res.status(404).json({ message: 'Cannot find project' });
+        }
+
+        if (req.body.name != null) {
+            project.name = req.body.name;
+        }
+        if (req.body.description != null) {
+            project.description = req.body.description;
+        }
+        if (req.body.deadline != null) {
+            project.deadline = req.body.deadline;
+        }
+
+        const updatedProject = await project.save();
+        res.json(updatedProject);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Delete a project
+router.delete('/:id', async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id);
+        if (project == null) {
+            return res.status(404).json({ message: 'Cannot find project' });
+        }
+
+        await project.remove();
+        res.json({ message: 'Deleted Project' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+module.exports = router;
+
+
+tasks.js
+const express = require('express');
+const router = express.Router();
+const Task = require('../models/Task');
+
+// Get all tasks
+router.get('/', async (req, res) => {
+    try {
+        const tasks = await Task.find();
+        res.json(tasks);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Create a new task
+router.post('/', async (req, res) => {
+    const task = new Task({
+        projectId: req.body.projectId,
+        name: req.body.name,
+        status: req.body.status,
+        deadline: req.body.deadline,
+    });
+
+    try {
+        const newTask = await task.save();
+        res.status(201).json(newTask);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Get a task by ID
+router.get('/:id', async (req, res) => {
+    try {
+        const task = await Task.findById(req.params.id);
+        if (task == null) {
+            return res.status(404).json({ message: 'Cannot find task' });
+        }
+        res.json(task);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Update a task
+router.patch('/:id', async (req, res) => {
+    try {
+        const task = await Task.findById(req.params.id);
+        if (task == null) {
+            return res.status(404).json({ message: 'Cannot find task' });
+        }
+
+        if (req.body.name != null) {
+            task.name = req.body.name;
+        }
+        if (req.body.status != null) {
+            task.status = req.body.status;
+        }
+        if (req.body.deadline != null) {
+            task.deadline = req.body.deadline;
+        }
+
+        const updatedTask = await task.save();
+        res.json(updatedTask);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Delete a task
+router.delete('/:id', async (req, res) => {
+    try {
+        const task = await Task.findById(req.params.id);
+        if (task == null) {
+            return res.status(404).json({ message: 'Cannot find task' });
+        }
+
+        await task.remove();
+        res.json({ message: 'Deleted Task' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+module.exports = router;
